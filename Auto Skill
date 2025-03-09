@@ -1,0 +1,106 @@
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local keys = {"Z", "X", "C", "V"}  -- Danh sách phím mặc định
+local min_delay = 0.5 
+local max_delay = 1.5
+local is_running = false
+
+-- GUI Setup
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0, 200, 0, 300)
+frame.Position = UDim2.new(0.1, 0, 0.1, 0)
+frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+frame.Active = true
+frame.Draggable = true
+
+local topBar = Instance.new("Frame", frame)
+topBar.Size = UDim2.new(1, 0, 0, 20)
+topBar.Position = UDim2.new(0, 0, 0, 0)
+topBar.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+topBar.BackgroundTransparency = 0.5
+
+local toggleButton = Instance.new("TextButton", frame)
+toggleButton.Size = UDim2.new(1, 0, 0.2, 0)
+toggleButton.Position = UDim2.new(0, 0, 0, 20)
+toggleButton.Text = "Bật Script"
+toggleButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+
+toggleButton.MouseButton1Click:Connect(function()
+    is_running = not is_running
+    toggleButton.Text = is_running and "Tắt Script" or "Bật Script"
+    toggleButton.BackgroundColor3 = is_running and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
+end)
+
+local selectedKeys = {}
+
+local function createKeyButton(key, position)
+    local keyButton = Instance.new("TextButton", frame)
+    keyButton.Size = UDim2.new(1, 0, 0.2, 0)
+    keyButton.Position = position
+    keyButton.Text = key
+    keyButton.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
+    keyButton.MouseButton1Click:Connect(function()
+        -- Chọn hoặc bỏ chọn phím
+        if table.find(selectedKeys, key) then
+            -- Nếu đã chọn thì bỏ chọn
+            table.remove(selectedKeys, table.find(selectedKeys, key))
+            keyButton.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
+        else
+            -- Nếu chưa chọn thì thêm vào danh sách
+            table.insert(selectedKeys, key)
+            keyButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        end
+    end)
+end
+
+for i, key in ipairs(keys) do
+    createKeyButton(key, UDim2.new(0, 0, 0.2 * (i + 1), 0))
+end
+
+local function pressKey(key)
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode[key], false, game)
+    task.wait(0.1)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode[key], false, game)
+end
+
+local function clickBackground()
+    local viewportSize = workspace.CurrentCamera.ViewportSize
+    local clickPosition = Vector2.new(50, viewportSize.Y - 50)
+    VirtualInputManager:SendMouseButtonEvent(clickPosition.X, clickPosition.Y, 0, true, game, 0)
+    task.wait(0.1)
+    VirtualInputManager:SendMouseButtonEvent(clickPosition.X, clickPosition.Y, 0, false, game, 0)
+end
+
+local function randomDelay()
+    return math.random() * (max_delay - min_delay) + min_delay
+end
+
+task.spawn(function()
+    while true do
+        if is_running then
+            -- Nhấn tất cả phím trong selectedKeys
+            for _, key in ipairs(selectedKeys) do
+                pressKey(key)
+            end
+            clickBackground()
+            task.wait(randomDelay())
+        else
+            task.wait(0.5)
+        end
+    end
+end)
+
+-- Đảm bảo không bị gián đoạn khi ESC được nhấn
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Escape then
+        if is_running then
+            task.wait(0.5)
+        end
+    end
+end)
