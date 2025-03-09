@@ -1,0 +1,140 @@
+local player = game.Players.LocalPlayer
+local userInput = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local character = player.Character or player.CharacterAdded:Wait()
+
+local autoTeleport = false
+local autoIslandTP = false
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AutoTPMenu"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 150, 0, 110)
+frame.Position = UDim2.new(0.1, 0, 0.1, 0)
+frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+frame.BorderSizePixel = 2
+frame.Parent = screenGui
+
+local dragBar = Instance.new("Frame")
+dragBar.Size = UDim2.new(1, 0, 0, 30)
+dragBar.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+dragBar.Parent = frame
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(1, 0, 0, 40)
+toggleButton.Position = UDim2.new(0, 0, 0, 30)
+toggleButton.Text = "Auto TP: OFF"
+toggleButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+toggleButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.TextSize = 18
+toggleButton.Parent = frame
+
+local islandTPButton = Instance.new("TextButton")
+islandTPButton.Size = UDim2.new(1, 0, 0, 40)
+islandTPButton.Position = UDim2.new(0, 0, 0, 70)
+islandTPButton.Text = "High Point TP: OFF"
+islandTPButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+islandTPButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+islandTPButton.Font = Enum.Font.SourceSansBold
+islandTPButton.TextSize = 18
+islandTPButton.Parent = frame
+
+local function updateButton()
+    toggleButton.Text = autoTeleport and "Auto TP: ON" or "Auto TP: OFF"
+    toggleButton.BackgroundColor3 = autoTeleport and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    islandTPButton.Text = autoIslandTP and "High Point TP: ON" or "High Point TP: OFF"
+    islandTPButton.BackgroundColor3 = autoIslandTP and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+end
+
+toggleButton.MouseButton1Click:Connect(function()
+    autoTeleport = not autoTeleport
+    updateButton()
+end)
+
+islandTPButton.MouseButton1Click:Connect(function()
+    autoIslandTP = not autoIslandTP
+    updateButton()
+end)
+
+local function teleportToPortal()
+    local portal = workspace:FindFirstChild("Portal")
+    if portal and portal:IsA("Part") and character.PrimaryPart then
+        character:SetPrimaryPartCFrame(portal.CFrame)
+        print("Teleported to portal!")
+        task.wait(0.5)
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+        task.wait(0.1)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+        task.wait(5)
+        local noSkill = workspace:FindFirstChild("NoSkill")
+        if noSkill and noSkill:IsA("Part") and character.PrimaryPart then
+            character:SetPrimaryPartCFrame(CFrame.new(noSkill.Position + Vector3.new(0, 5, 0)))
+        end
+        task.wait(28)
+        if autoIslandTP then
+            for i = 1, 2 do
+                if character.PrimaryPart then
+                    character:SetPrimaryPartCFrame(character.PrimaryPart.CFrame + Vector3.new(0, 300, 0))
+                end
+                task.wait(5)
+            end
+        end
+    end
+end
+
+task.spawn(function()
+    while true do
+        if autoTeleport then
+            if character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 then
+                teleportToPortal()
+            end
+        end
+        task.wait(5)
+    end
+end)
+
+local dragging, dragInput, dragStart, startPos
+
+dragBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+    end
+end)
+
+dragBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+userInput.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+dragBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+player.CharacterAdded:Connect(function(newCharacter)
+    character = newCharacter
+    task.wait(1)
+    if not player.PlayerGui:FindFirstChild("AutoTPMenu") then
+        screenGui.Parent = player.PlayerGui
+    end
+end)
+
+game.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, true)
+game.StarterGui:SetCore("ResetButtonCallback", false)
+
+updateButton()
