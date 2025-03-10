@@ -3,10 +3,10 @@ local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
-local keys = { "Z", "X", "C", "V" }  -- skills
+local keys = { "Z", "X", "C", "V"}  -- skills
 local numberKeys = { "One", "Two", "Three", "Four" }  -- weapon
-local min_delay = 0.5 
-local max_delay = 1.5
+local min_delay = 3
+local max_delay = 5
 local is_running = false
 
 -- GUI Setup
